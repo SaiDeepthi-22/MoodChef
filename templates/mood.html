@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Choose Mood - MoodChef</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Poppins', sans-serif;
+      }
+      .hidden {
+        display: none;
+      }
+      .recipe-step {
+        margin-bottom: 15px;
+      }
+      .step {
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body class="bg-gradient-to-tr from-pink-300 via-purple-400 to-indigo-500 min-h-screen flex items-center justify-center text-white">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="MoodChef Logo" class="w-16 h-16 rounded-full border-2 border-white absolute top-4 right-4 z-50" />
+      <div class="p-10 rounded-3xl shadow-2xl text-center w-[90%] max-w-xl bg-white bg-opacity-10 backdrop-blur-lg">
+        ...your mood, dietary, recipe content...
+      </div> <!-- closing -->
+      
+      <!-- Now OUTSIDE -->
+      
+      <div id="chatbotSection" class="bg-white bg-opacity-20 p-4 rounded-2xl mt-8 backdrop-blur-md shadow-lg w-[90%] max-w-xl">
+        <h2 class="text-xl font-semibold mb-4 text-gray-100">Need Help Deciding? Chat with MoodChef 🤖</h2>
+        <div id="chat-box" class="bg-white text-gray-800 rounded-md p-4 h-40 overflow-y-auto mb-4"></div>
+        <input type="text" id="userInput" placeholder="Type your mood..." class="w-full p-2 rounded-md mb-2 text-gray-800">
+        <button onclick="handleUserInput()" class="bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-semibold py-2 px-4 rounded-full">Send</button>
+      </div>
+      
+
+      <!-- Dietary Preferences Form (hidden initially) -->
+      <div id="dietaryPreferences" class="hidden mt-8">
+        <p class="text-lg text-gray-100 mb-4">Please select your dietary preferences:</p>
+        
+        <select id="dietaryChoice" class="p-2 rounded-md text-gray-800">
+          <option value="vegan">Vegan</option>
+          <option value="vegetarian">Vegetarian</option>
+          <option value="non-vegetarian">Non-Vegetarian</option>
+        </select>
+        
+        <button 
+          onclick="submitDietary()" 
+          class="bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-semibold py-2 px-6 rounded-full transition duration-300 transform hover:scale-105 shadow-lg mt-4"
+        >
+          Submit Dietary Preferences
+        </button>
+      </div>
+
+      <!-- Recipe Display (hidden initially) -->
+      <div id="recipeDisplay" class="hidden mt-8">
+        <h2 class="text-2xl font-semibold mb-4">Your Suggested Recipe</h2>
+        <div id="recipeContent"></div>
+        <button 
+          onclick="goBack()" 
+          class="bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-semibold py-2 px-6 rounded-full transition duration-300 transform hover:scale-105 shadow-lg mt-4"
+        >
+          Back to Mood Selection
+        </button>
+      </div>
+      <!-- Chatbot Section -->
+    </div>
+
+    <script>
+      let selectedMood = null;
+      let selectedDietary = null;
+
+      function useDetectedMood() {
+        selectedMood = "detected"; // You can later retrieve the detected mood from the previous page
+        showDietaryPreferences();
+      }
+
+      function submitMood() {
+        selectedMood = document.getElementById('manualMood').value;
+        alert(`You selected mood: ${selectedMood}`);
+        showDietaryPreferences();
+      }
+
+      function showDietaryPreferences() {
+        // Show dietary preferences form after selecting mood
+        document.getElementById('dietaryPreferences').classList.remove('hidden');
+      }
+
+      function submitDietary() {
+        selectedDietary = document.getElementById('dietaryChoice').value;
+        alert(`You selected dietary preference: ${selectedDietary}`);
+        showRecipe();
+      }
+
+      function showRecipe() {
+        // Based on mood and dietary preference, display recipe
+        let recipe = getRecipe(selectedMood, selectedDietary);
+        document.getElementById('recipeContent').innerHTML = recipe;
+        document.getElementById('recipeDisplay').classList.remove('hidden');
+        document.getElementById('dietaryPreferences').classList.add('hidden');
+        
+        // Start reading out the recipe steps
+        readRecipeSteps(recipe);
+      }
+
+      function getRecipe(mood, dietary) {
+        // Define the recipes based on mood and dietary preferences
+        const recipes = {
+          "happy": {
+            "vegan": `
+              <div class="recipe-step">
+                <p class="step">Step 1:</p> Prepare a fresh fruit salad with berries, bananas, and oranges.
+              </div>
+              <div class="recipe-step">
+                <p class="step">Step 2:</p> Blend in some almond milk for a refreshing smoothie.
+              </div>
+              <div class="recipe-step">
+                <p class="step">Step 3:</p> Garnish with mint leaves and serve chilled.
+              </div>
+            `,
+            "vegetarian": `
+              <div class="recipe-step">
+                <p class="step">Step 1:</p> Prepare a vegetable stir-fry with bell peppers, broccoli, and tofu.
+              </div>
+              <div class="recipe-step">
+                <p class="step">Step 2:</p> Serve with brown rice or quinoa for a healthy meal.
+              </div>
+            `,
+            "non-vegetarian": `
+              <div class="recipe-step">
+                <p class="step">Step 1:</p> Grill chicken breast with a mix of lemon, garlic, and rosemary.
+              </div>
+              <div class="recipe-step">
+                <p class="step">Step 2:</p> Serve with roasted vegetables like carrots and potatoes.
+              </div>
+            `
+          },
+          "sad": {
+            "vegan": `
+              <div class="recipe-step">
+                <p class="step">Step 1:</p> Make a comforting tomato soup with basil and garlic.
+              </div>
+              <div class="recipe-step">
+                <p class="step">Step 2:</p> Serve with crusty whole-grain bread.
+              </div>
+            `,
+            "vegetarian": `
+              <div class="recipe-step">
+                <p class="step">Step 1:</p> Prepare a hearty lentil stew with carrots, potatoes, and spices.
+              </div>
+              <div class="recipe-step">
+                <p class="step">Step 2:</p> Serve with a side of steamed vegetables.
+              </div>
+            `,
+            "non-vegetarian": `
+              <div class="recipe-step">
+                <p class="step">Step 1:</p> Prepare a comforting chicken noodle soup.
+              </div>
+              <div class="recipe-step">
+                <p class="step">Step 2:</p> Serve with fresh bread rolls.
+              </div>
+            `
+          }
+        };
+
+        // Return the recipe for the selected mood and dietary preference
+        return recipes[mood][dietary] || "No recipe available.";
+      }
+
+      function readRecipeSteps(recipe) {
+        const steps = recipe.match(/<p class="step">Step \d+:.*?<\/p>/g);
+        if (steps) {
+          let index = 0;
+
+          // Read each step out loud with a delay
+          function speakStep() {
+            if (index < steps.length) {
+              const stepText = steps[index].replace(/<\/?[^>]+(>|$)/g, ""); // Remove HTML tags
+              const utterance = new SpeechSynthesisUtterance(stepText);
+              speechSynthesis.speak(utterance);
+
+              // Wait for the speech to finish before reading the next step
+              utterance.onend = function() {
+                index++;
+                speakStep();
+              };
+            }
+          }
+
+          speakStep(); // Start reading the steps
+        }
+      }
+
+      function goBack() {
+        // Go back to mood selection
+        document.getElementById('recipeDisplay').classList.add('hidden');
+        document.getElementById('dietaryPreferences').classList.remove('hidden');
+
+      }
+      function handleUserInput() {
+  const input = document.getElementById("userInput").value.trim();
+  if (!input) return;
+
+  const chatBox = document.getElementById("chat-box");
+  chatBox.innerHTML += `<div><strong>You:</strong> ${input}</div>`;
+  
+  document.getElementById("userInput").value = "";
+
+  // Call AI
+  sendMessageToAI(input);
+}
+
+
+
+function sendMessageToAI(userMessage) {
+  fetch('/ask_ai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: userMessage })
+  })
+  .then(response => response.json())
+  .then(data => {
+    const mood = data.mood;
+    const diet = data.diet;
+
+    if (mood) {
+      selectedMood = mood;
+      sessionStorage.setItem('selectedMood', mood);
+      document.getElementById('chat-box').innerHTML += `<div><strong>MoodChef:</strong> I detected your mood as <em>${mood}</em>.</div>`;
+    }
+
+    if (diet) {
+      selectedDietary = diet;
+      document.getElementById('dietaryPreferences').classList.remove('hidden');
+      document.getElementById('dietaryChoice').value = diet;
+      document.getElementById('chat-box').innerHTML += `<div><strong>MoodChef:</strong> You prefer <em>${diet}</em> food.</div>`;
+    }
+
+    if (selectedMood && selectedDietary) {
+      showRecipe();
+    } else if (selectedMood) {
+      showDietaryPreferences();
+    }
+
+    document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+  });
+}
+
+    </script>
+
+  </body>
+</html>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sign Up - MoodChef</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(20px);
+    }
+    .bubble {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      animation: float 8s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-40px); }
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-tr from-yellow-400 via-pink-400 to-purple-600 min-h-screen flex items-center justify-center relative overflow-hidden text-white">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="MoodChef Logo" class="w-16 h-16 rounded-full border-2 border-white absolute top-4 right-4 z-50" />
+  <!-- Background Bubbles -->
+  <div class="bubble w-24 h-24 top-12 left-12"></div>
+  <div class="bubble w-16 h-16 top-28 right-20"></div>
+  <div class="bubble w-20 h-20 bottom-20 left-24"></div>
+  <div class="bubble w-28 h-28 bottom-10 right-24"></div>
+
+  <!-- Signup Card -->
+  <div class="glass p-8 rounded-3xl shadow-2xl w-[90%] max-w-md z-10 animate-fade-in-up">
+    <h2 class="text-3xl font-semibold text-center mb-6">Create Your Account</h2>
+
+    <form action="{{ url_for('signup') }}" method="POST" class="flex flex-col gap-4">
+
+      <input type="text" name="name" placeholder="Name" required
+             class="px-4 py-2 rounded-full bg-white/20 placeholder-white/70 text-white outline-none focus:ring-2 focus:ring-yellow-300 transition duration-300" />
+
+      <input type="email" name="email" placeholder="Email" required
+             class="px-4 py-2 rounded-full bg-white/20 placeholder-white/70 text-white outline-none focus:ring-2 focus:ring-yellow-300 transition duration-300" />
+
+      <input type="password" name="password" placeholder="Password" required
+             class="px-4 py-2 rounded-full bg-white/20 placeholder-white/70 text-white outline-none focus:ring-2 focus:ring-yellow-300 transition duration-300" />
+
+      <button type="submit"
+              class="mt-4 bg-white text-gray-900 font-bold py-2 rounded-full hover:bg-gray-100 transition duration-300 transform hover:scale-105">
+        Sign Up
+      </button>
+    </form>
+
+    <p class="mt-4 text-sm text-center text-white/80">
+      Already have an account?
+      <a href="{{ url_for('login') }}" class="text-yellow-200 underline hover:text-yellow-300">Login</a>
+    </p>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Choose Mood - MoodChef</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Poppins', sans-serif;
+      }
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body class="bg-gradient-to-tr from-pink-300 via-purple-400 to-indigo-500 min-h-screen flex flex-col items-center justify-center text-white relative">
+
+    <!-- 🔹 Quick Hub -->
+    <div class="absolute top-4 right-4 z-50 group">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="MoodChef Logo"
+           class="w-16 h-16 rounded-full border-2 border-white cursor-pointer hover:scale-110 transition"
+           onclick="toggleQuickHub()" />
+
+      <div id="quickHub" class="hidden mt-2 bg-white text-gray-800 rounded-lg shadow-lg w-64 absolute right-0 p-4 space-y-2">
+        <h3 class="text-lg font-semibold text-indigo-600 mb-2">MoodChef Quick Hub</h3>
+        <button onclick="showChatbot()" class="w-full text-left hover:bg-gray-100 px-2 py-1 rounded">🍽️ Today’s Mood Recipe</button>
+        <button onclick="location.href='/detect'" class="w-full text-left hover:bg-gray-100 px-2 py-1 rounded">🔁 Re-detect Mood</button>
+      </div>
+    </div>
+
+    <!-- 🔹 Mood Selection -->
+    <div class="p-10 rounded-3xl shadow-2xl text-center w-[90%] max-w-xl bg-white bg-opacity-10 backdrop-blur-lg">
+      <h1 class="text-3xl font-semibold mb-6">Choose Your Mood</h1>
+      <p class="text-lg text-gray-100 mb-4">Would you like to select your mood manually or use the mood detected?</p>
+
+      <button onclick="useDetectedMood()" class="bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-semibold py-2 px-6 rounded-full transition duration-300 transform hover:scale-105 shadow-lg mb-4">
+        Use Detected Mood
+      </button>
+
+      <div>
+        <p class="text-gray-100 mb-4">Or, select a mood manually:</p>
+        <select id="manualMood" class="p-2 rounded-md text-gray-800">
+          <option value="happy">Happy</option>
+          <option value="sad">Sad</option>
+          <option value="angry">Angry</option>
+          <option value="surprised">Surprised</option>
+        </select>
+        <button onclick="submitMood()" class="bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-semibold py-2 px-6 rounded-full transition duration-300 transform hover:scale-105 shadow-lg mt-4">
+          Submit Mood
+        </button>
+      </div>
+
+      <div id="dietaryPreferences" class="hidden mt-8">
+        <p class="text-lg text-gray-100 mb-4">Please select your dietary preferences:</p>
+        <select id="dietaryChoice" class="p-2 rounded-md text-gray-800">
+          <option value="vegan">Vegan</option>
+          <option value="vegetarian">Vegetarian</option>
+          <option value="non-vegetarian">Non-Vegetarian</option>
+        </select>
+        <button onclick="submitDietary()" class="bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-semibold py-2 px-6 rounded-full transition duration-300 transform hover:scale-105 shadow-lg mt-4">
+          Submit Dietary Preferences
+        </button>
+        <!-- Nutrition Goals Dropdown -->
+<div id="nutritionGoals" class="mt-4">
+  <label class="block mb-2 text-white font-semibold">Select Nutrition Goal:</label>
+  <select id="nutritionChoice" class="p-2 rounded-md text-gray-800">
+    <option value="balanced">Balanced</option>
+    <option value="weightLoss">Weight Loss</option> 
+    <option value="highProtein">High Protein</option> 
+  </select>
+  
+</div>
+
+      </div>
+
+      <div id="recipeDisplay" class="hidden mt-8">
+        <h2 class="text-2xl font-semibold mb-4">Your Suggested Recipe</h2>
+        <div id="recipeContent"></div>
+  
+        <!-- 🔹 Cooking Controls -->
+        <div id="cookingControls" class="flex gap-4 justify-center mt-6">
+          <button id="pauseBtn" onclick="pauseCooking()" class="bg-red-400 hover:bg-red-300 text-white font-semibold py-2 px-4 rounded-full shadow-lg transition transform hover:scale-105">
+            Pause
+          </button>
+          <button id="resumeBtn" onclick="resumeCooking()" class="bg-green-400 hover:bg-green-300 text-white font-semibold py-2 px-4 rounded-full shadow-lg transition transform hover:scale-105 hidden">
+            Resume
+          </button>
+          <button id="stopBtn" onclick="stopCooking()" class="bg-gray-400 hover:bg-gray-300 text-white font-semibold py-2 px-4 rounded-full shadow-lg transition transform hover:scale-105">
+            Stop
+          </button>
+        </div>
+
+        <button onclick="goBack()" class="bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-semibold py-2 px-6 rounded-full transition duration-300 transform hover:scale-105 shadow-lg mt-6">
+          Back to Mood Selection
+        </button>
+      </div>
+    </div>
+    
+
+    <!-- 🔹 Chatbot Section (initially hidden) -->
+    <!-- 🔹 Chatbot Popup (initially hidden) -->
+<div id="chatbotOverlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div id="chatbotPopup" class="bg-white text-gray-900 p-6 rounded-2xl shadow-2xl w-[90%] max-w-md backdrop-blur">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold text-indigo-600">Chat with MoodChef 🤖</h2>
+      <button onclick="closeChatbot()" class="text-red-500 text-xl font-bold hover:text-red-700">✖️</button>
+    </div>
+    <div id="chat-box" class="bg-gray-100 rounded-md p-4 h-40 overflow-y-auto mb-4 text-sm text-black"></div>
+    <input type="text" id="userInput" placeholder="Type your mood..." class="w-full p-2 rounded-md mb-2 border border-gray-300">
+    <button onclick="handleUserInput()" class="bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-semibold py-2 px-4 rounded-full w-full">Send</button>
+  </div>
+</div>
+
+
+    <!-- 🔹 Scripts -->
+    <script>
+      let selectedMood = null;
+      let selectedDietary = null;
+      let utterance = null;
+      let paused = false;
+      let index = 0;
+      let steps = [];
+
+      function useDetectedMood() {
+        window.location.href = "/detect";
+      }
+
+      function submitMood() {
+  selectedMood = document.getElementById('manualMood').value;
+  sessionStorage.setItem('selectedMood', selectedMood); // ✅ ADD THIS
+  alert(`You selected mood: ${selectedMood}`);
+  showDietaryPreferences();
+}
+
+
+      function showDietaryPreferences() {
+        document.getElementById('dietaryPreferences').classList.remove('hidden');
+      }
+
+      function submitDietary() {
+        selectedMood = (selectedMood || sessionStorage.getItem('selectedMood'));
+  selectedDietary = document.getElementById('dietaryChoice').value;
+  selectedNutrition = document.getElementById('nutritionChoice').value;
+
+  if (!selectedMood || !selectedDietary || !selectedNutrition) {
+    alert("Please make sure mood, dietary preference, and nutrition goal are selected.");
+    return;
+  }
+
+  // Force lowercase (important!)
+  selectedMood = selectedMood.toLowerCase();
+  selectedDietary = selectedDietary.toLowerCase();
+  selectedNutrition = selectedNutrition.toLowerCase();
+
+  // Debug log (optional but helpful)
+  console.log("DEBUG - Mood:", selectedMood, "Diet:", selectedDietary, "Nutrition:", selectedNutrition);
+
+  alert(`You selected: Mood = ${selectedMood}, Diet = ${selectedDietary}, Nutrition = ${selectedNutrition}`);
+  showRecipe();
+}
+
+
+
+
+function showRecipe() {
+  const recipeData = getRecipe(selectedMood, selectedDietary, selectedNutrition);
+  let content = `<h3 class='text-xl font-bold mb-2'>${recipeData.name}</h3>`;
+  content += `<p class='mb-2'><strong>Ingredients:</strong> ${recipeData.ingredients.join(', ')}</p>`;
+  content += recipeData.steps;
+  document.getElementById('recipeContent').innerHTML = content;
+  document.getElementById('recipeDisplay').classList.remove('hidden');
+  document.getElementById('dietaryPreferences').classList.add('hidden');
+  readRecipeSteps(recipeData.steps);
+}
+
+      function pauseCooking() {
+      if (speechSynthesis.speaking && !speechSynthesis.paused) {
+        speechSynthesis.pause();
+        paused = true;
+      }
+    }
+
+    function resumeCooking() {
+      if (speechSynthesis.paused) {
+        speechSynthesis.resume();
+        paused = false;
+      }
+    }
+
+    function stopCooking() {
+      speechSynthesis.cancel();
+      paused = false;
+      index = 0;
+    }
+
+    function goBack() {
+      document.getElementById('recipeDisplay').classList.add('hidden');
+      document.getElementById('dietaryPreferences').classList.remove('hidden');
+    }
+
+    function getRecipe(mood, dietary, nutrition) {
+      mood = mood.toLowerCase();
+  dietary = dietary.toLowerCase();
+  if (nutrition.toLowerCase() === 'weightloss') nutrition = 'weightLoss';
+  if (nutrition.toLowerCase() === 'highprotein') nutrition = 'highProtein';
+  if (nutrition.toLowerCase() === 'balanced') nutrition = 'balanced';
+    const recipes = {
+    happy: {
+      vegan: {
+        balanced: {
+          name: "Fruity Vegan Smoothie",
+          ingredients: ["Berries", "Bananas", "Oranges", "Chia seeds", "Maple syrup", "Almond milk", "Ice", "Mint leaves"],
+          steps: `<div class="recipe-step"><p class="step">Step 1: In a blender, combine berries, bananas, oranges, and chia seeds.</p></div>
+              <div class="recipe-step"><p class="step">Step 2: Add a splash of maple syrup and almond milk to the blender.</p></div>
+              <div class="recipe-step"><p class="step">Step 3: Add a handful of ice to make the smoothie cold and refreshing.</p></div>
+              <div class="recipe-step"><p class="step">Step 4: Blend until smooth and creamy.</p></div>
+              <div class="recipe-step"><p class="step">Step 5: Pour into a glass and garnish with fresh mint leaves.</p></div>
+              <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Serve your fruity vegan smoothie and enjoy a refreshing, healthy treat!</p></div>`
+        },
+        weightLoss: {
+          name: "Green Detox Smoothie",
+          ingredients: ["Spinach", "Cucumber", "Apple", "Lemon", "Ginger", "Coconut water"],
+          steps: `<div class="recipe-step"><p class="step">Step 1: Blend spinach, cucumber, and apple until smooth.</p></div>
+              <div class="recipe-step"><p class="step">Step 2: Add lemon juice, fresh ginger, and coconut water to the mixture.</p></div>
+              <div class="recipe-step"><p class="step">Step 3: Blend again to combine all ingredients thoroughly.</p></div>
+              <div class="recipe-step"><p class="step">Step 4: Taste the smoothie and adjust sweetness, if desired, with a small amount of honey or stevia.</p></div>
+              <div class="recipe-step"><p class="step">Step 5: Pour the smoothie into a glass or jar.</p></div>
+              <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Chill and enjoy your detox drink!</p></div>`
+        },
+        highProtein: {
+          name: "Tofu Power Bowl",
+          ingredients: ["Tofu", "Quinoa", "Kale", "Hummus", "Lemon"],
+          steps: `<div class="recipe-step"><p class="step">Step 1: Preheat the oven and bake tofu cubes until golden and crispy, about 20-25 minutes.</p></div>
+              <div class="recipe-step"><p class="step">Step 2: Cook quinoa according to package instructions.</p></div>
+              <div class="recipe-step"><p class="step">Step 3: Toss fresh kale and quinoa together in a bowl.</p></div>
+              <div class="recipe-step"><p class="step">Step 4: Add the baked tofu cubes and a generous scoop of hummus to the bowl, mixing everything together.</p></div>
+              <div class="recipe-step"><p class="step">Step 5: Optionally, season with salt, pepper, or herbs to taste.</p></div>
+              <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Drizzle with fresh lemon juice and serve!</p></div>`
+        }
+      },
+      vegetarian: {
+        balanced: { name: "Cheesy Quesadillas",
+      ingredients: ["Spinach", "Corn", "Cheese", "Tortilla"],
+      steps: `
+        <div class="recipe-step"><p class="step">Step 1: Make a cheese-spinach mixture by sautéing spinach and combining it with shredded cheese.</p></div>
+        <div class="recipe-step"><p class="step">Step 2: Place the mixture and corn inside tortillas and fold them.</p></div>
+        <div class="recipe-step"><p class="step">Step 3: Grill each tortilla until crispy and golden brown on both sides.</p></div>
+        <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Serve hot with salsa on the side.</p></div>`
+    },
+        weightLoss: { name: "Veggie Lettuce Wraps",
+      ingredients: ["Lettuce", "Carrots", "Cabbage", "Chickpeas", "Tahini"],
+      steps: `
+        <div class="recipe-step"><p class="step">Step 1: Mix chopped carrots, cabbage, and chickpeas together in a bowl.</p></div>
+        <div class="recipe-step"><p class="step">Step 2: Spoon the veggie-chickpea mixture into large lettuce leaves.</p></div>
+        <div class="recipe-step"><p class="step">Step 3: Drizzle tahini sauce over the mixture.</p></div>
+        <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Enjoy your healthy wrap!</p></div>`
+    },
+        highProtein: { name: "Paneer Spinach Bowl",
+      ingredients: ["Paneer", "Spinach", "Brown rice", "Yogurt"],
+      steps: `
+        <div class="recipe-step"><p class="step">Step 1: Sauté paneer cubes and fresh spinach in a pan until cooked.</p></div>
+        <div class="recipe-step"><p class="step">Step 2: Cook brown rice and layer it in a bowl.</p></div>
+        <div class="recipe-step"><p class="step">Step 3: Place the sautéed paneer and spinach mixture on top of the rice.</p></div>
+        <div class="recipe-step"><p class="step">Step 4: Add a dollop of yogurt to the bowl.</p></div>
+        <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Sprinkle herbs like cilantro or parsley and enjoy!</p></div>`
+    }
+      },
+      "non-vegetarian": {
+        balanced: { name: "Grilled Chicken Bowl",
+    ingredients: ["Chicken breast", "Brown rice", "Avocado", "Spinach", "Lemon"],
+    steps: `
+      <div class="recipe-step"><p class="step">Step 1: Grill the chicken breast until golden and fully cooked.</p></div>
+      <div class="recipe-step"><p class="step">Step 2: Cook brown rice according to package instructions.</p></div>
+      <div class="recipe-step"><p class="step">Step 3: Slice avocado and wash fresh spinach leaves.</p></div>
+      <div class="recipe-step"><p class="step">Step 4: Layer the rice, spinach, and grilled chicken in a bowl.</p></div>
+      <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Top with avocado slices and a squeeze of lemon juice. Enjoy!</p></div>`
+  },
+        weightLoss: {  name: "Chicken Veggie Lettuce Wraps",
+    ingredients: ["Chicken mince", "Carrots", "Lettuce", "Bell peppers", "Soy sauce"],
+    steps: `
+      <div class="recipe-step"><p class="step">Step 1: Stir-fry chicken mince with chopped carrots and bell peppers in soy sauce.</p></div>
+      <div class="recipe-step"><p class="step">Step 2: Wash and dry large lettuce leaves.</p></div>
+      <div class="recipe-step"><p class="step">Step 3: Spoon the chicken mixture into the lettuce leaves.</p></div>
+      <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Wrap, roll, and enjoy your low-carb high-flavor meal!</p></div>`
+  },
+        highProtein: { name: "Egg Chicken Protein Platter",
+    ingredients: ["Boiled eggs", "Grilled chicken", "Spinach", "Hummus", "Quinoa"],
+    steps: `
+      <div class="recipe-step"><p class="step">Step 1: Boil eggs and slice them in halves.</p></div>
+      <div class="recipe-step"><p class="step">Step 2: Grill chicken pieces with light seasoning.</p></div>
+      <div class="recipe-step"><p class="step">Step 3: Cook quinoa and allow it to cool slightly.</p></div>
+      <div class="recipe-step"><p class="step">Step 4: Assemble quinoa, chicken, spinach, hummus, and egg halves on a plate.</p></div>
+      <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Enjoy your protein-packed platter!</p></div>`
+  }
+      }
+    },
+    sad: {
+      vegan: {
+        balanced: { name: "Coconut Tomato Soup",
+          ingredients: ["Tomatoes", "Coconut milk", "Garlic", "Bread"],
+          steps: `<div class="recipe-step"><p class="step">Step 1: Heat a little oil in a pot and sauté minced garlic until fragrant.</p></div>
+               <div class="recipe-step"><p class="step">Step 2: Add chopped tomatoes and cook until soft and juicy.</p></div>
+               <div class="recipe-step"><p class="step">Step 3: Pour in coconut milk and let the mixture simmer for 10–15 minutes.</p></div>
+               <div class="recipe-step"><p class="step">Step 4: Blend the soup until smooth and creamy using a hand blender or regular blender.</p></div>
+               <div class="recipe-step"><p class="step">Step 5: Season with salt, pepper, and your favorite herbs (like basil or thyme).</p></div>
+               <div class="recipe-step"><p class="step">Step 6: Toast sourdough bread slices until golden and crispy.</p></div>
+               <div class="recipe-step"><p class="step">Step 7: Serve the hot coconut tomato soup with the toasted sourdough on the side.</p></div>
+               <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Garnish with fresh herbs or a drizzle of coconut milk, and enjoy your cozy, creamy coconut tomato soup!</p></div>`
+            },
+        weightLoss: { name: "Zucchini Soup",
+    ingredients: ["Zucchini", "Onion", "Olive oil", "Basil"],
+    steps: `
+      <div class="recipe-step"><p class="step">Step 1: Heat olive oil in a pot and sauté chopped zucchini and onion until soft.</p></div>
+      <div class="recipe-step"><p class="step">Step 2: Add water or vegetable broth to the pot and bring to a simmer. Cook until the zucchini is fully tender.</p></div>
+      <div class="recipe-step"><p class="step">Step 3: Blend the mixture until smooth and creamy using an immersion blender or regular blender.</p></div>
+      <div class="recipe-step"><p class="step">Step 4: Stir in fresh basil and adjust seasoning with salt and pepper.</p></div>
+      <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Serve hot and enjoy your low-calorie soup!</p></div>`
+  },
+        highProtein: {name: "Lentil Protein Stew",
+    ingredients: ["Lentils", "Spinach", "Carrots", "Spices"],
+    steps: `
+      <div class="recipe-step"><p class="step">Step 1: Rinse and cook lentils with your choice of spices (such as cumin, coriander, and turmeric) in a pot with water or broth.</p></div>
+      <div class="recipe-step"><p class="step">Step 2: Add chopped spinach and carrots to the pot. Continue to cook until the vegetables are tender and the lentils are soft.</p></div>
+      <div class="recipe-step"><p class="step">Step 3: Stir the stew to combine and adjust seasoning as needed.</p></div>
+      <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Simmer for a few minutes and serve hot!</p></div>`
+      }
+      },
+      vegetarian: {
+        balanced: {name: "Mac and Cheese",
+    ingredients: ["Pasta", "Cheddar cheese", "Milk", "Breadcrumbs", "Parsley"],
+    steps: `<div class="recipe-step"><p class="step">Step 1: Boil pasta and make a cheese sauce.</p></div>
+            <div class="recipe-step"><p class="step">Step 2: Bake with breadcrumbs until golden.</p></div>
+            <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Garnish with parsley and serve.</p></div>`
+  },
+        weightLoss: {name: "Steamed Veg Bowl",
+    ingredients: ["Broccoli", "Carrots", "Beans", "Lemon", "Olive oil"],
+    steps: `<div class="recipe-step"><p class="step">Step 1: Steam the vegetables until tender.</p></div>
+            <div class="recipe-step"><p class="step">Step 2: Drizzle with lemon and olive oil.</p></div>
+            <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Serve warm or cold.</p></div>`
+  },
+        highProtein: {name: "Paneer Lentil Stew",
+    ingredients: ["Paneer", "Lentils", "Tomatoes", "Spices"],
+    steps: `<div class="recipe-step"><p class="step">Step 1: Cook lentils with tomatoes and spices.</p></div>
+            <div class="recipe-step"><p class="step">Step 2: Add paneer cubes and simmer.</p></div>
+            <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Serve hot with whole wheat roti.</p></div>`
+  }
+      },
+      "non-vegetarian": {
+        balanced: { name: "Chicken Noodle Soup",
+    ingredients: ["Chicken", "Noodles", "Carrots", "Celery", "Herbs", "Toast"],
+    steps: `<div class="recipe-step"><p class="step">Step 1: Cook chicken and veggies in broth.</p></div>
+            <div class="recipe-step"><p class="step">Step 2: Add noodles and simmer.</p></div>
+            <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Serve with toast on the side.</p></div>`
+  },
+        weightLoss: {name: "Lemon Poached Chicken Salad",
+    ingredients: ["Chicken breast", "Spinach", "Cucumber", "Lemon"],
+    steps: `<div class="recipe-step"><p class="step">Step 1: Poach chicken in lemon water.</p></div>
+            <div class="recipe-step"><p class="step">Step 2: Slice and serve over a light salad.</p></div>
+            <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Add lemon vinaigrette.</p></div>`
+  },
+        highProtein: {name: "Egg Chicken Veggie Skillet",
+    ingredients: ["Chicken", "Eggs", "Bell peppers", "Onions", "Spinach"],
+    steps: `<div class="recipe-step"><p class="step">Step 1: Sauté chicken and vegetables.</p></div>
+            <div class="recipe-step"><p class="step">Step 2: Crack eggs on top and cook until set.</p></div>
+            <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Serve straight from the skillet.</p></div>`
+          }
+      }
+    },
+    angry: {
+      vegan: {
+        balanced: { name: "Spicy Tofu Stir-Fry",
+      ingredients: ["Tofu", "Broccoli", "Garlic", "Chili flakes", "Soy sauce", "Rice"],
+      steps: `<div class="recipe-step"><p class="step">Step 1: Fry tofu and sauté garlic with chili.</p></div>
+              <div class="recipe-step"><p class="step">Step 2: Stir-fry with veggies and soy sauce.</p></div>
+              <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Serve with rice.</p></div>`
+    },
+        weightLoss: { name: "Chili Veg Wraps",
+      ingredients: ["Whole wheat wrap", "Chickpeas", "Hot sauce", "Lettuce"],
+      steps: `<div class="recipe-step"><p class="step">Step 1: Mash chickpeas with chili and veggies.</p></div>
+              <div class="recipe-step"><p class="step">Step 2: Roll in lettuce and wrap.</p></div>
+              <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Serve chilled or warm.</p></div>`
+    },
+        highProtein: {  name: "Tofu Peanut Bowl",
+    ingredients: ["Tofu", "Peanut sauce", "Bell peppers", "Brown rice"],
+    steps: `
+      <div class="recipe-step"><p class="step">Step 1: Sear tofu cubes in a pan until crispy and golden brown.</p></div>
+      <div class="recipe-step"><p class="step">Step 2: Stir-fry sliced bell peppers in the same pan until tender.</p></div>
+      <div class="recipe-step"><p class="step">Step 3: Add peanut sauce to the tofu and peppers, stirring to coat evenly.</p></div>
+      <div class="recipe-step"><p class="step">Step 4: Serve the tofu and pepper mixture on top of cooked brown rice.</p></div>
+      <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Garnish with fresh herbs or nuts, and enjoy your protein-packed bowl!</p></div>`
+  }
+      },
+      vegetarian: {
+        balanced: {name: "Paneer Chili",
+      ingredients: ["Paneer", "Soy sauce", "Garlic", "Green chilies", "Noodles"],
+      steps: `
+        <div class="recipe-step"><p class="step">Step 1: Stir-fry paneer cubes with soy sauce, garlic, and sliced green chilies until golden and fragrant.</p></div>
+        <div class="recipe-step"><p class="step">Step 2: Add chopped onions and cook until softened.</p></div>
+        <div class="recipe-step"><p class="step">Step 3: Add chopped bell peppers and cook for an additional few minutes until tender.</p></div>
+        <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Serve the paneer chili over a bed of noodles, and enjoy your hearty meal!</p></div>`
+    },
+        weightLoss: {name: "Grilled Veg Skewers",
+      ingredients: ["Bell peppers", "Zucchini", "Tofu", "Spices"],
+      steps: `
+        <div class="recipe-step"><p class="step">Step 1: Marinate the bell peppers, zucchini, and tofu with your favorite spices for at least 30 minutes.</p></div>
+        <div class="recipe-step"><p class="step">Step 2: Thread the marinated veggies and tofu onto skewers.</p></div>
+        <div class="recipe-step"><p class="step">Step 3: Grill the skewers until the veggies and tofu are tender and slightly charred.</p></div>
+        <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Serve the grilled skewers with a squeeze of fresh lemon for extra flavor and enjoy!</p></div>`
+    },
+        highProtein: { name: "Spiced Paneer Bowl",
+      ingredients: ["Paneer", "Spinach", "Chickpeas", "Cumin"],
+      steps: `
+        <div class="recipe-step"><p class="step">Step 1: Sauté chickpeas with cumin and other spices in a pan until crispy and fragrant.</p></div>
+        <div class="recipe-step"><p class="step">Step 2: Add fresh spinach to the pan and cook until wilted.</p></div>
+        <div class="recipe-step"><p class="step">Step 3: Grill paneer cubes separately until crispy and golden brown.</p></div>
+        <div class="recipe-step"><p class="step">Step 4: Add the grilled paneer cubes to the chickpea and spinach mixture, stirring gently.</p></div>
+        <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Serve the spiced paneer bowl with fresh herbs like cilantro for a burst of flavor!</p></div>`
+    }
+      },
+      "non-vegetarian": {
+        balanced: {  name: "Spicy Chicken Biryani",
+      ingredients: ["Chicken", "Basmati rice", "Chilies", "Yogurt", "Onions"],
+      steps: `<div class="recipe-step"><p class="step">Step 1: Marinate chicken with yogurt and spices.</p></div>
+              <div class="recipe-step"><p class="step">Step 2: Cook marinated chicken until tender.</p></div>
+              <div class="recipe-step"><p class="step">Step 3: Parboil basmati rice with whole spices.</p></div>
+              <div class="recipe-step"><p class="step">Step 4: Layer chicken and rice with fried onions.</p></div>
+              <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Dum cook (steam) everything together and serve hot.</p></div>`
+    },
+        weightLoss: {  name: "Grilled Chili Chicken Salad",
+      ingredients: ["Chicken breast", "Lettuce", "Chili sauce", "Cucumber"],
+      steps: `<div class="recipe-step"><p class="step">Step 1: Marinate chicken breast in chili sauce.</p></div>
+              <div class="recipe-step"><p class="step">Step 2: Grill the chicken until golden and cooked through.</p></div>
+              <div class="recipe-step"><p class="step">Step 3: Slice cucumber and wash lettuce.</p></div>
+              <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Toss all ingredients into a bowl and serve fresh.</p></div>`
+    },
+        highProtein: { name: "Boiled Egg Chicken Bowl",
+      ingredients: ["Eggs", "Chicken", "Spinach", "Hot dressing"],
+      steps: `<div class="recipe-step"><p class="step">Step 1: Boil eggs and set aside.</p></div>
+              <div class="recipe-step"><p class="step">Step 2: Grill or pan-cook chicken pieces with light seasoning.</p></div>
+              <div class="recipe-step"><p class="step">Step 3: Blanch spinach briefly or serve raw as preferred.</p></div>
+              <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Combine all ingredients in a bowl and drizzle with hot dressing.</p></div>`
+    }
+      }
+    },
+    surprised: {
+      vegan: {
+        balanced: { name: "Mango Salsa Bowl",
+      ingredients: ["Quinoa", "Black beans", "Corn", "Mango", "Avocado", "Lime juice"],
+      steps: `<div class="recipe-step"><p class="step">Step 1: Cook quinoa and let it cool.</p></div>
+              <div class="recipe-step"><p class="step">Step 2: Prepare mango salsa with diced mango, avocado, corn, and lime juice.</p></div>
+              <div class="recipe-step"><p class="step">Step 3: Mix quinoa with black beans and mango salsa.</p></div>
+              <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Serve fresh in a bowl and enjoy!</p></div>`
+    },
+        weightLoss: {name: "Tropical Detox Salad",
+      ingredients: ["Pineapple", "Spinach", "Cucumber", "Chia"],
+      steps: `<div class="recipe-step"><p class="step">Step 1: Dice pineapple and slice cucumber.</p></div>
+              <div class="recipe-step"><p class="step">Step 2: Combine all ingredients in a large salad bowl.</p></div>
+              <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Sprinkle chia seeds, chill, and enjoy.</p></div>`
+    },
+        highProtein: {name: "Chickpea Mango Bowl",
+      ingredients: ["Chickpeas", "Mango", "Red onion", "Quinoa"],
+      steps: `<div class="recipe-step"><p class="step">Step 1: Cook chickpeas and quinoa separately.</p></div>
+              <div class="recipe-step"><p class="step">Step 2: Dice mango and thinly slice red onion.</p></div>
+              <div class="recipe-step"><p class="step">Step 3: Mix everything together in a bowl.</p></div>
+              <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Drizzle with a light dressing and serve.</p></div>`
+    }
+      },
+      vegetarian: {
+        balanced: {  name: "Stuffed Bell Peppers",
+      ingredients: ["Bell peppers", "Rice", "Cheese", "Tomato sauce"],
+      steps: `<div class="recipe-step"><p class="step">Step 1: Cook rice and mix with cheese and tomato sauce.</p></div>
+              <div class="recipe-step"><p class="step">Step 2: Hollow out bell peppers and stuff with the rice mixture.</p></div>
+              <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Bake until peppers are tender and cheese is melted.</p></div>`
+    },
+        weightLoss: { name: "Zucchini Boats",
+      ingredients: ["Zucchini", "Tomatoes", "Herbs", "Low-fat cheese"],
+      steps: `<div class="recipe-step"><p class="step">Step 1: Cut zucchinis in half and scoop out the center.</p></div>
+              <div class="recipe-step"><p class="step">Step 2: Fill with chopped tomatoes, herbs, and cheese.</p></div>
+              <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Bake until tender and serve warm.</p></div>`
+    },
+        highProtein: {name: "Lentil-Stuffed Peppers",
+      ingredients: ["Lentils", "Bell peppers", "Quinoa", "Spices"],
+      steps: `<div class="recipe-step"><p class="step">Step 1: Cook lentils and quinoa with spices.</p></div>
+              <div class="recipe-step"><p class="step">Step 2: Stuff the cooked mixture into halved bell peppers.</p></div>
+              <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Bake and serve hot with a side salad.</p></div>`
+    }
+      },
+      "non-vegetarian": {
+        balanced: {name: "Honey-Glazed Salmon",
+      ingredients: ["Salmon", "Honey", "Lemon", "Asparagus", "Rice"],
+      steps: `<div class="recipe-step"><p class="step">Step 1: Marinate salmon in honey and lemon juice.</p></div>
+              <div class="recipe-step"><p class="step">Step 2: Bake salmon and roast asparagus.</p></div>
+              <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Serve with lemon rice and asparagus on the side.</p></div>`
+    },
+        weightLoss: {  name: "Grilled Fish Tacos",
+      ingredients: ["Fish fillets", "Cabbage slaw", "Corn tortilla", "Lime"],
+      steps: `<div class="recipe-step"><p class="step">Step 1: Grill seasoned fish fillets until cooked.</p></div>
+              <div class="recipe-step"><p class="step">Step 2: Prepare cabbage slaw with lime and herbs.</p></div>
+              <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Assemble tacos with slaw and grilled fish, and squeeze lime over them.</p></div>`
+    },
+        highProtein: {name: "Salmon Veg Power Bowl",
+      ingredients: ["Salmon", "Spinach", "Quinoa", "Avocado"],
+      steps: `<div class="recipe-step"><p class="step">Step 1: Grill salmon and cook quinoa until fluffy.</p></div>
+              <div class="recipe-step"><p class="step">Step 2: Wash spinach and slice avocado.</p></div>
+              <div class="recipe-step"><p class="step"><strong>Final Step:</strong> Layer everything in a bowl and serve with a lemon wedge.</p></div>`
+    }
+    }
+  }
+  };
+  console.log("Fetching:", mood, dietary, nutrition);
+  console.log("Exists:", recipes[mood]?.[dietary]?.[nutrition]);
+
+  return recipes[mood]?.[dietary]?.[nutrition] || {
+    name: "Recipe Not Found",
+    ingredients: ["Check back soon!"],
+    steps: `<p class='step'>We're still cooking up recipes for ${mood} mood with ${dietary} ${nutrition} options!</p>`
+  };
+}
+
+      function readRecipeSteps(recipeHTML) {
+        speechSynthesis.cancel();
+        paused = false;
+        index = 0;
+        utterance = null;
+        steps = recipeHTML.match(/<p class="step">.*?<\/p>/g);
+        if (steps && steps.length > 0) speakStep();
+      }
+
+      function speakStep() {
+        if (index < steps.length) {
+          const stepText = steps[index].replace(/<[^>]+>/g, "");
+          utterance = new SpeechSynthesisUtterance(stepText);
+          utterance.onend = function () {
+            if (!paused) {
+              index++;
+              speakStep();
+            }
+          };
+          speechSynthesis.speak(utterance);
+        }
+      }
+
+      function goBack() {
+        document.getElementById('recipeDisplay').classList.add('hidden');
+        document.getElementById('dietaryPreferences').classList.remove('hidden');
+      }
+
+      function toggleQuickHub() {
+        document.getElementById('quickHub').classList.toggle('hidden');
+      }
+
+      function showChatbot() {
+  document.getElementById("chatbotOverlay").classList.remove("hidden");
+}
+
+function closeChatbot() {
+  document.getElementById("chatbotOverlay").classList.add("hidden");
+}
+
+
+      function viewFavorites() {
+        const favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+        alert(favorites.length === 0 ? "No favorites yet!" : favorites.join('\n'));
+      }
+
+      let chatStep = 0;
+let userMood = null;
+let userDiet = null;
+
+function showChatbot() {
+  document.getElementById("chatbotOverlay").classList.remove("hidden");
+
+  // Greet the user when opening the chatbot
+  const chatBox = document.getElementById("chat-box");
+  chatBox.innerHTML = `<div><strong>MoodChef:</strong> Hi! How are you feeling today? 😊</div>`;
+}
+
+function closeChatbot() {
+  document.getElementById("chatbotOverlay").classList.add("hidden");
+}
+
+async function handleUserInput() {
+  const input = document.getElementById("userInput").value.trim().toLowerCase();
+  if (!input) return;
+
+  const chatBox = document.getElementById("chat-box");
+  chatBox.innerHTML += `<div><strong>You:</strong> ${input}</div>`;
+  chatBox.scrollTop = chatBox.scrollHeight;
+  document.getElementById("userInput").value = "";
+
+  if (chatStep === 0) {
+    userMood = input;
+    chatBox.innerHTML += `<div><strong>MoodChef:</strong> ${
+      userMood.includes("happy") ? "Yay! Glad you're feeling happy! 🌞" :
+      userMood.includes("sad") ? "Oh no, don't worry, we'll cheer you up! 🌧️" :
+      userMood.includes("angry") ? "Uh oh, let's find something to calm you down. 🔥" :
+      userMood.includes("surprised") ? "Wow! Let's surprise you with a cool dish! 🎉" :
+      "Got it! Let's make something amazing! 🍽️"
+    }</div>`;
+    chatBox.innerHTML += `<div><strong>MoodChef:</strong> Now, what's your dietary preference? (vegan / vegetarian / non-vegetarian)</div>`;
+    chatStep = 1;
+  } else if (chatStep === 1) {
+    userDiet = input;
+    if (!["vegan", "vegetarian", "non-vegetarian"].includes(userDiet)) {
+      chatBox.innerHTML += `<div><strong>MoodChef:</strong> Please choose vegan, vegetarian, or non-vegetarian. 🌱🍗</div>`;
+      return;
+    }
+    chatBox.innerHTML += `<div><strong>MoodChef:</strong> Awesome! Preparing a recipe for you... 🍳</div>`;
+
+    // Set mood and diet
+    sessionStorage.setItem('selectedMood', userMood);
+    sessionStorage.setItem('selectedDietary', userDiet);
+
+    selectedMood = userMood;
+selectedDietary = userDiet;
+selectedNutrition = "balanced"; // 👈 Default or extend chatbot to ask for it
+showRecipe();
+
+
+    // Reset chatbot
+    chatStep = 0;
+    userMood = null;
+    userDiet = null;
+  }
+}
+function pauseCooking() {
+  if (speechSynthesis.speaking && !speechSynthesis.paused) {
+    speechSynthesis.pause();
+    paused = true;
+
+    document.getElementById('pauseBtn').classList.add('hidden');
+    document.getElementById('resumeBtn').classList.remove('hidden');
+    document.getElementById('stopBtn').classList.remove('hidden');
+  }
+}
+
+function resumeCooking() {
+  if (speechSynthesis.paused) {
+    speechSynthesis.resume();
+    paused = false;
+
+    document.getElementById('resumeBtn').classList.add('hidden');
+    document.getElementById('pauseBtn').classList.remove('hidden');
+    document.getElementById('stopBtn').classList.remove('hidden');
+  }
+}
+function stopCooking() {
+  speechSynthesis.cancel();
+  paused = false;
+  index = 0;
+
+  // After stopping, show only Pause button again
+  document.getElementById('pauseBtn').classList.remove('hidden');
+  document.getElementById('resumeBtn').classList.add('hidden');
+  document.getElementById('stopBtn').classList.add('hidden');
+}
+   
+   </script>
+   <script>
+    let timeLeft = 60;
+    let timerId;
+    let points = 0;
+
+    function startChallenge() {
+        timeLeft = 60;
+        points = 0;
+        document.getElementById("challengeStatus").innerHTML = `Challenge started! Time left: ${timeLeft}s<br>Points: ${points}`;
+        timerId = setInterval(updateChallenge, 1000);
+    }
+
+    function updateChallenge() {
+        timeLeft--;
+        points += 10;
+        document.getElementById("challengeStatus").innerHTML = `Time left: ${timeLeft}s<br>Points: ${points}`;
+
+        if (timeLeft <= 0) {
+            clearInterval(timerId);
+            document.getElementById("challengeStatus").innerHTML = `Challenge complete! You earned ${points} points! 🎉`;
+        }
+    }
+</script>
+
+  </body>
+</html>

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Detect Mood - MoodChef</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+    }
+    .video-container {
+      position: relative;
+      width: 100%;
+      max-width: 640px;
+      margin: auto;
+      text-align: center;
+    }
+    video, canvas {
+      width: 100%;
+      border-radius: 12px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+    }
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      max-width: 700px;
+      margin: 20px auto;
+      backdrop-filter: blur(8px);
+    }
+    .mood-display {
+      font-size: 1.5rem;
+      color: #fff;
+      margin-top: 20px;
+    }
+    .step {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 10px;
+      margin-top: 10px;
+    }
+    .highlight {
+      background: rgba(255, 255, 255, 0.3);
+      color: #fff700;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body class="bg-gradient-to-tr from-pink-300 via-purple-400 to-indigo-500 min-h-screen flex items-center justify-center text-white">
+  <div class="container">
+    <h1 class="text-3xl font-semibold mb-6">Detect Your Mood</h1>
+
+    <div class="video-container">
+      <video id="video" autoplay muted></video>
+      <canvas id="canvas"></canvas>
+    </div>
+
+    <button id="detectButton" class="bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-semibold py-2 px-6 rounded-full transition duration-300 transform hover:scale-105 shadow-lg mt-6">
+      Capture and Detect Mood
+    </button>
+
+    <div id="moodDisplay" class="mood-display"></div>
+
+    <div id="preferencesForm" class="mt-6 hidden">
+      <h2 class="text-xl font-semibold mb-2">Tell us your Preferences</h2>
+      <label class="block mb-2">
+        Dietary Preference:
+        <select id="dietPreference" class="text-black p-2 rounded w-full mt-1">
+          <option value="vegetarian">Vegetarian</option>
+          <option value="vegan">Vegan</option>
+          <option value="gluten-free">Gluten-Free</option>
+          <option value="none">No Specific Preference</option>
+        </select>
+      </label>
+      <label class="block mb-4">
+        Nutrition Focus:
+        <select id="nutritionFocus" class="text-black p-2 rounded w-full mt-1">
+          <option value="high-protein">High Protein</option>
+          <option value="low-carb">Low Carb</option>
+          <option value="low-fat">Low Fat</option>
+          <option value="balanced">Balanced</option>
+        </select>
+      </label>
+      <button onclick="handlePreferences()" class="bg-green-300 hover:bg-green-200 text-gray-900 font-semibold py-2 px-4 rounded-full transition">
+        Submit Preferences
+      </button>
+    </div>
+
+    <div id="stepList" class="mt-6 text-left text-lg"></div>
+  </div>
+
+  <script>
+    let currentUtterance = null;
+    let isPaused = false;
+    let currentIndex = 0;
+    let mood = null;
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      async function setup() {
+        await faceapi.nets.tinyFaceDetector.loadFromUri('/static/models');
+        await faceapi.nets.faceExpressionNet.loadFromUri('/static/models');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        video.addEventListener('playing', () => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          faceapi.matchDimensions(canvas, { width: video.videoWidth, height: video.videoHeight });
+        });
+      }
+
+      document.getElementById('detectButton').addEventListener('click', async () => {
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const moodDisplay = document.getElementById('moodDisplay');
+        const stepList = document.getElementById('stepList');
+
+        if (video.paused || video.ended) {
+          moodDisplay.innerHTML = "Please allow camera access.";
+          return;
+        }
+
+        const detections = await faceapi
+          .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+          .withFaceExpressions();
+
+        if (detections) {
+          const expressions = detections.expressions;
+          mood = Object.keys(expressions).reduce((a, b) => expressions[a] > expressions[b] ? a : b);
+
+          const resizedDetections = faceapi.resizeResults(detections, { width: video.videoWidth, height: video.videoHeight });
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          faceapi.draw.drawDetections(canvas, resizedDetections);
+          faceapi.draw.drawFaceExpressions(canvas, resizedDetections);
+
+          moodDisplay.innerHTML = `
+            You're feeling <span class="font-bold">${mood.charAt(0).toUpperCase() + mood.slice(1)}</span>!<br>
+            <span class="text-yellow-300">Please tell us your dietary and nutrition preferences.</span>
+          `;
+
+          document.getElementById('preferencesForm').classList.remove('hidden');
+          stepList.innerHTML = ""; // Clear any previous steps
+        } else {
+          moodDisplay.innerHTML = "No face detected. Please try again.";
+        }
+      });
+
+      await setup();
+    });
+
+    function handlePreferences() {
+      const diet = document.getElementById('dietPreference').value;
+      const nutrition = document.getElementById('nutritionFocus').value;
+
+      const recipe = getRecipeSuggestion(mood); // Mood already detected
+      const steps = recipes[mood];
+
+      const moodDisplay = document.getElementById('moodDisplay');
+      moodDisplay.innerHTML += `
+        <br><span class="text-yellow-300">Suggested Recipe: <strong>${recipe}</strong></span><br>
+        <button onclick="speakRecipeSteps('${mood}')" class="mt-4 bg-white text-indigo-600 font-semibold py-2 px-4 rounded-full shadow hover:bg-gray-200 transition">Start Cooking 🔊</button>
+      `;
+
+      const stepList = document.getElementById('stepList');
+      stepList.innerHTML = `<h2 class="text-xl font-semibold mt-4 mb-2">Steps:</h2>` +
+        steps.map((step, i) => `<div class="step" id="step-${i}">${step}</div>`).join('');
+
+      document.getElementById('preferencesForm').classList.add('hidden');
+    }
+
+    function getRecipeSuggestion(mood) {
+      switch (mood) {
+        case 'happy': return "🍓 Fruity Vegan Smoothie";
+        case 'sad': return "🥣 Coconut Tomato Soup";
+        case 'angry': return "🌶️ Spicy Tofu Stir-Fry";
+        case 'surprised': return "🥭 Mango Salsa Bowl";
+        case 'neutral': return "🥪 Grilled Cheese Sandwich";
+        case 'disgusted': return "🍋 Lemon Herb Quinoa Salad";
+        case 'fearful': return "🧀 Comfort Mac & Cheese";
+        default: return "🍛 Chef’s Choice: Mixed Veg Platter";
+      }
+    }
+
+    const recipes = {
+      happy: [
+        "Add fruits like berries, bananas, and oranges to a blender.",
+        "Pour in some almond milk and maple syrup.",
+        "Blend until smooth and creamy.",
+        "Serve chilled and enjoy your smoothie!"
+      ],
+      sad: [
+        "Heat a pot and add chopped tomatoes and garlic.",
+        "Pour in coconut milk and let it simmer.",
+        "Blend until smooth and serve hot with bread."
+      ],
+      angry: [
+        "Fry tofu until golden.",
+        "Stir-fry veggies with chili and garlic.",
+        "Add tofu back, pour soy sauce, and mix well.",
+        "Serve hot over steamed rice."
+      ],
+      surprised: [
+        "Cook quinoa and let it cool.",
+        "Add mango, avocado, beans, and corn.",
+        "Mix gently and drizzle lime juice.",
+        "Serve chilled as a fresh bowl."
+      ],
+      fearful: [
+        "Boil macaroni in salted water.",
+        "Make a creamy cheese sauce.",
+        "Mix pasta with sauce, top with breadcrumbs.",
+        "Bake until golden and bubbling."
+      ],
+      neutral: [
+        "Butter slices of bread.",
+        "Add cheese and grill both sides.",
+        "Cut and serve with tomato soup."
+      ],
+      disgusted: [
+        "Cook quinoa, add lemon zest and herbs.",
+        "Add chopped cucumber and tomatoes.",
+        "Toss together with olive oil dressing."
+      ]
+    };
+
+    function speakRecipeSteps(mood) {
+      const steps = recipes[mood];
+      if (!steps) return;
+
+      currentIndex = 0;
+      isPaused = false;
+      currentUtterance = null;
+
+      const moodDisplay = document.getElementById('moodDisplay');
+      if (!document.getElementById('speech-controls')) {
+        const controlsHTML = `
+          <div id="speech-controls" class="mt-4">
+            <button id="pauseBtn" onclick="pauseSpeech()" class="bg-red-400 hover:bg-red-300 text-white font-semibold py-1 px-4 rounded-full mr-2">⏸ Pause</button>
+            <button id="resumeBtn" onclick="resumeSpeech()" class="bg-green-400 hover:bg-green-300 text-white font-semibold py-1 px-4 rounded-full mr-2">▶️ Resume</button>
+            <button id="stopBtn" onclick="stopSpeech()" class="bg-gray-400 hover:bg-gray-300 text-white font-semibold py-1 px-4 rounded-full">⏹️ Stop Cooking</button>
+          </div>
+        `;
+        moodDisplay.insertAdjacentHTML('beforeend', controlsHTML);
+      }
+
+      console.log('Starting to speak the recipe steps...');
+      speakNext();
+
+      function speakNext() {
+        if (currentIndex >= steps.length || isPaused) return;
+
+        document.querySelectorAll('.step').forEach(step => step.classList.remove('highlight'));
+        const currentStep = document.getElementById(`step-${currentIndex}`);
+        if (currentStep) currentStep.classList.add('highlight');
+
+        currentUtterance = new SpeechSynthesisUtterance(steps[currentIndex]);
+        currentUtterance.onend = function () {
+          if (!isPaused) {
+            currentIndex++;
+            speakNext();
+          }
+        };
+
+        // Debugging: log the text that's being spoken
+        console.log(`Speaking step ${currentIndex}: ${steps[currentIndex]}`);
+
+        try {
+          speechSynthesis.speak(currentUtterance);
+        } catch (error) {
+          console.error("Error with speech synthesis:", error);
+        }
+      }
+    }
+
+    function pauseSpeech() {
+      if (speechSynthesis.speaking) {
+        speechSynthesis.pause();
+        isPaused = true;
+        highlightButton('pauseBtn');
+        console.log("Speech paused");
+      }
+    }
+
+    function resumeSpeech() {
+      if (speechSynthesis.paused) {
+        speechSynthesis.resume();
+        isPaused = false;
+        highlightButton('resumeBtn');
+        console.log("Speech resumed");
+      }
+    }
+
+    function stopSpeech() {
+      speechSynthesis.cancel();
+      isPaused = false;
+      currentIndex = 0;
+      currentUtterance = null;
+      const controls = document.getElementById('speech-controls');
+      if (controls) controls.remove();
+      document.querySelectorAll('.step').forEach(step => step.classList.remove('highlight'));
+    }
+
+    function highlightButton(activeId) {
+      const buttons = ['pauseBtn', 'resumeBtn', 'stopBtn'];
+      buttons.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+          if (id === activeId) {
+            btn.classList.add('ring-4', 'ring-white', 'scale-105');
+          } else {
+            btn.classList.remove('ring-4', 'ring-white', 'scale-105');
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
