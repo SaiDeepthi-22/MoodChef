@@ -1,4 +1,4 @@
-# 🍳 MoodChef — Mood-Based Smart Recipe Recommender
+# MoodChef — Mood-Based Smart Recipe Recommender
 
 > *"Your mood decides the menu."*
 
